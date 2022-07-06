@@ -11,10 +11,18 @@
 ### 6 июля
 * Запущен бейзлайн SfmLearner, написан скрипт для визуализации траектории
 * Скачаны KITTI Raw и KITTI Odometry
-* ! Разобраться с визуализацией глубины
-* ! Снять свои видео по плиткам и долгое во время прогулки
+* Разобраться с визуализацией глубины
+* Снять свои видео по плиткам и долгое во время прогулки
+
+### 7 июля
+* Понять как считается scale_factor в test_pose
+* Понять train validate_with_gt_pose как формируется final_pose
 
 ## Интринсики (нужно проверить)
 ZB633KL: Sony IMX486 f=26mm, pix=1.25e-3mm, height=1080px, width=1920px
 K = f/pix 0 width/2 0 f/pix height/2 0 0 1 = 20800 0 960 0 20800 540 0 0 1
+
+## Глубина
+depth = baseline * focal / disparity
+KITTI: baseline=540mm, focal=707mm
 
