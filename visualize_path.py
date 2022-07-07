@@ -33,14 +33,14 @@ def to_path(predictions, type_):
     # x: right,   y: down,  z: forward
 
     path = []
-    prev = {"x": 0, "y": 0, "z": 0, "length": 0, "type": type_}
+    prev = {"x": 0, "y": 0, "z": 0, "frame": 1, "length": 0, "type": type_}
     length = 0
     for i in range(predictions.shape[1]):
         x = predictions[0, i, 0, 3]
         y = predictions[0, i, 2, 3]
         z = -predictions[0, i, 1, 3]
 
-        curr = {"x": x, "y": y, "z": z, "length": prev["length"], "type": type_}
+        curr = {"x": x, "y": y, "z": z, "frame": prev["frame"] + 1 ,"length": prev["length"], "type": type_}
         curr["length"] += ((curr["x"] - prev["x"]) ** 2 + (curr["y"] - prev["y"]) ** 2 + (curr["z"] - prev["z"]) ** 2) ** 0.5
 
         path.append(curr)
@@ -51,7 +51,7 @@ def to_path(predictions, type_):
         y = predictions[i, -1, 2, 3]
         z = -predictions[i, -1, 1, 3]
 
-        curr = {"x": x, "y": y, "z": z, "length": prev["length"], "type": type_}
+        curr = {"x": x, "y": y, "z": z, "frame": prev["frame"] + 1, "length": prev["length"], "type": type_}
         curr["length"] += ((curr["x"] - prev["x"]) ** 2 + (curr["y"] - prev["y"]) ** 2 + (curr["z"] - prev["z"]) ** 2) ** 0.5
 
         path.append(curr)
@@ -83,7 +83,7 @@ if __name__ == "__main__":
     else:
         df = pred_path
 
-    fig = px.scatter_3d(df, x="x", y="y", z="z", color="type", hover_data=["length"])
+    fig = px.scatter_3d(df, x="x", y="y", z="z", color="type", hover_data=["length", "frame"])
     fig.update_layout(scene=dict(aspectmode="data"))
     fig.show()
 
