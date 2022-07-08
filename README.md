@@ -2,27 +2,35 @@
 
 ## Полезные ссылки
 [Отчетная преза](https://docs.google.com/presentation/d/1f3BKS4f2tlF1K5UaCT5WZelm-FVpcz17/edit?usp=sharing&ouid=100789703876834227826&rtpof=true&sd=true)
+[Backup отчетной презы](https://docs.google.com/presentation/d/1E8qbHs3jCNF-ejv9MXRF8pTJ3mTutaLAZfMEL4c3ViQ/edit#slide=id.g1368b6a625b_0_2731)
 [Связанные статьи](https://docs.google.com/spreadsheets/d/1tRVtcsxwYK_F6P-zFTjac21a8KmPF63BA1GodeC9cLg/edit#gid=0)
 [CV Themes Pitching](https://docs.google.com/presentation/d/1Nf0RiArBz9SlYQzwhTAr9tp0wdh8Jidl/edit#slide=id.g13b057c3d1d_0_35)
 [Papers with Code Topic](https://paperswithcode.com/task/depth-and-camera-motion)
 
 ## Прогресс по задачам
 
-### 6 июля
-* Запущен бейзлайн SfmLearner, написан скрипт для визуализации траектории
-* Скачаны KITTI Raw и KITTI Odometry
-* Разобраться с визуализацией глубины
-* Снять свои видео по плиткам и долгое во время прогулки
+### 05.07 — Сделано
+* Прочитали статью SfMLearner и запустили инференс
+* Записали несколько коротких видео и построили траекторию
+* Нашли приблизительную калибровку камеры по метаданным
+* Скачали KITTI и Cityscapes, прогнали инференс на Cityscapes
 
-### 7 июля
+### 06.07 — Сделано
+* Запустили SfMLearner, написали скрипт для построения траектории
+* Записали свое видео с прохождением известной траектории
+* Пострили траектории для KITTI и для своего набора данных
+
+### 07.07 — Сделано
+* Записали длинный ролик для обучения на улицах города 
+* Откалибровали камеру методом шахматной доски
+* Сделали замеры скорости движения, произвели сверку данных скорости с реальными
+* Произвели попытку отобразить облако точек для траектории движения
+
+### Далекие планы
+* Анализ других архитектур PoseNet, DepthNet и процессов обучения
+* Дообучение модели на своих данных (семплирование со скоростью KITTI)
+
+### Понять в коде
 * Понять как считается scale_factor в test_pose
 * Понять train validate_with_gt_pose как формируется final_pose
-
-## Интринсики (нужно проверить)
-ZB633KL: Sony IMX486 f=26mm, pix=1.25e-3mm, height=1080px, width=1920px
-K = f/pix 0 width/2 0 f/pix height/2 0 0 1 = 20800 0 960 0 20800 540 0 0 1
-
-## Глубина
-depth = baseline * focal / disparity
-KITTI: baseline=540mm, focal=707mm
 
