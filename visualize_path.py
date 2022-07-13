@@ -8,8 +8,8 @@ import plotly.express as px
 def scale_rel_poses(predictions, scales):
     for i in range(0, len(predictions)):
         for j in range(min(i, predictions.shape[1])):
-            if scales[f"{i - j:07}"] > 1e-3:
-                predictions[i - j, j, :, -1] /= scales[f"{i - j:07}"]
+            if scales[f"{i - j:06}"] > 1e-3:
+                predictions[i - j, j, :, -1] /= scales[f"{i - j:06}"]
 
     return predictions
 
@@ -34,6 +34,15 @@ def read_abs_poses(filepath):
 
     return np.array(predictions)
 
+
+def read_slam_abs_poses(filepath):
+    predictions = []
+    for pred in np.load(filepath):
+        p = np.concatenate([np.eye(3), pred], axis=1)
+        predictions.append(p)
+
+    print(np.array(predictions).shape)
+    return np.array(predictions)
 
 def to_path(predictions, type_):
     # The coordinate systems are defined the following way, where directions
@@ -65,6 +74,7 @@ def get_arguments():
     parser.add_argument("--npy", type=str, help=".npy file with predicted poses", required=True)
     parser.add_argument("--txt", type=str, help=".txt file with true poses")
     parser.add_argument("--scale", type=str, help=".npy file with predicted pose scales")
+    parser.add_argument("--slam_npy", type=str, help=".npy file with predicted slam poses")
 
     return parser.parse_args()
 
@@ -93,6 +103,11 @@ if __name__ == "__main__":
 
     if args.scale is not None:
         pathes.append(pred_path_scaled)
+
+    if args.slam_npy is not None:
+        pred_slam_poses = read_slam_abs_poses(args.slam_npy)
+        pred_slam_path = to_path(pred_slam_poses, type_="pred slam")
+        pathes.append(pred_slam_path)
 
     fig = px.scatter_3d(pd.concat(pathes), x="x", y="y", z="z", color="type", hover_data=["length", "frame"])
     fig.update_layout(scene=dict(aspectmode="data"))
