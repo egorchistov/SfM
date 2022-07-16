@@ -1,27 +1,26 @@
-# Построение траектории перемещения по данным монокулярной камеры мобильного телефона
+# Visual odometry using a mobile phone monocular camera
 
-Репозиторий в разработке и будет дополнен
+**E. Chistov, M. Tregubenko, and S. Linok**
 
-## Полезные ссылки
+The repository is under development and will be updated
 
-* [Presentation](https://docs.google.com/presentation/d/1E8qbHs3jCNF-ejv9MXRF8pTJ3mTutaLAZfMEL4c3ViQ/edit#slide=id.g1368b6a625b_0_2731)
-* [Papers with Code Topic](https://paperswithcode.com/task/depth-and-camera-motion)
+1. [x] Create repository description in README
+1. [ ] Add Google Colaboratory demo
+1. [ ] Add proposed method description and results
+1. [ ] Add documentation and tests
+1. [ ] Think about trajectory length, frame rate and frame size
 
-## Описание репозитория
+## Overview
 
-* point_cloud — основной ноутбук для построения облака точек и определения масштаба по глубине
-* calib — Ноутбук для калибровки камер и два набора изображений с разных камер
-* notebooks — Google Colab ноутбуки для запуска репозиториев
-* papers — pdf связанных статей
-* path_examples — данные для построения траекторий с помощью visualize_path.py
-* true_scales.ipynb — преобразование формата файлов масштаба
-* visualize_path.py — визуализация траекторий
-* gps2txt.py — конвертирование .gpx файлов OsmAnd в .txt файлы для visualize_path.py
-* get_path.py — построение квадратной траектории для visualize_path.py
+Visual odometry is the process of determining the position and orientation of a phone by analyzing the camera images. One of the visual odometry problems is the discrepancy between the scale of the predicted and ground truth trajectory.
 
-Пример команды для визуализации траектории
+![Scale discrepancy example](images/scale-discrepancy-example.jpg)
 
-```shell
-python visualize_path.py --npy=path_examples/phone_1_video_1_rate_5_sequence_1.npy --scale path_examples/phone_1_video_1_rate_5_sequence_1_5x_scales.npy --slam path_examples/coords_phone_1_video_1_rate_5_sequence_1_sift.npy --txt=path_examples/phone_1_video_1_rate_5_sequence_1.txt
-```
+This repository contains algorithm to scale trajectory predicted by [SfM Learner](https://github.com/ClementPinard/SfmLearner-Pytorch). For scaling we use metadata such as camera heigth, video frame rate and camera intrinsics.
+
+![Algorithm overview](images/algorithm-overview.jpg)
+
+## Usage
+
+Try [demo](demo.ipynb) in Google Colaboratory!
 
