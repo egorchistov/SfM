@@ -135,16 +135,12 @@ if __name__ == "__main__":
         true_height = float(f.read())
     print("Load camera height:", true_height, "meters")
 
-    with open(os.path.join(args.sequence, "rate.txt"), "r") as f:
-        rate = float(f.read())
-    print("Load framerate downsampling factor:", rate)
-
     scales = []
     for disparity in tqdm(disparities, desc="Frames"):
         disparity = io.imread(disparity, as_gray=True)
         depth = np.divide(1, disparity, where=disparity != 0)
         scale = find_scale(depth, [fx, fy, cx, cy], true_height, rgb=None, mask=None, visualize=False)
-        scale = max(1e-3, scale / rate)
+        scale = max(1e-3, scale)
         scales.append(1 / scale)
     print("Median scale is:", np.median(scales))
 

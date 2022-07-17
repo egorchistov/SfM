@@ -8,7 +8,7 @@ The repository is under development and will be updated
 1. [x] Add Google Colaboratory demo
 1. [ ] Add proposed method description and results
 1. [ ] Add documentation and tests
-1. [ ] Think about trajectory length, frame rate and frame size
+1. [ ] Think about predicted trajectory length and displacement magnitude
 
 ## Overview
 
@@ -16,7 +16,7 @@ Visual odometry is the process of determining the position and orientation of a 
 
 ![Scale discrepancy example](images/scale-discrepancy-example.jpg)
 
-This repository contains algorithm to scale trajectory predicted by [SfM Learner](https://github.com/ClementPinard/SfmLearner-Pytorch). For scaling we use metadata such as camera heigth, video frame rate and camera intrinsics.
+This repository contains algorithm to scale trajectory predicted by [SfM Learner](https://github.com/ClementPinard/SfmLearner-Pytorch). For scaling we use metadata such as camera heigth and camera intrinsics.
 
 ![Algorithm overview](images/algorithm-overview.jpg)
 
