@@ -1,2 +1,6 @@
-pydeck
 pyransac3d
+numpy
+pandas
+scikit-image
+tqdm
+plotly

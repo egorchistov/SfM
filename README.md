@@ -22,4 +22,3 @@ Visual odometry is the process of determining the position and orientation of a 
 This repository contains algorithm to scale trajectory predicted by [SfM Learner](https://github.com/ClementPinard/SfmLearner-Pytorch). For scaling we use metadata such as camera heigth and camera intrinsics.
 
 ![Algorithm overview](images/algorithm-overview.jpg)
-
