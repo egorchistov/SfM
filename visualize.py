@@ -207,16 +207,16 @@ if __name__ == "__main__":
     args = get_arguments()
 
     rel_poses = predictions2rel(np.load(os.path.join(args.dataset, "sequences", args.sequence, "predictions.npy")))
-    pred_path = abs2path(rel2abs(rel_poses.copy()), label="predicted by SfM-Learner path")
+    pred_path = abs2path(rel2abs(rel_poses.copy()), label="Trajectory predicted by SfM Learner")
     print("Load predicted path: ", os.path.join(args.dataset, "sequences", args.sequence, "predictions.npy"))
 
-    true_path = abs2path(kitti2abs(os.path.join(args.dataset, "poses", f"{args.sequence}.txt")), label="ground truth path")
+    true_path = abs2path(kitti2abs(os.path.join(args.dataset, "poses", f"{args.sequence}.txt")), label="Ground Truth Trajectory")
     print("Load ground truth path: ", os.path.join(args.dataset, "poses", f"{args.sequence}.txt"))
 
     with open(os.path.join(args.dataset, "sequences", args.sequence, "scale.txt"), "r") as f:
         scales = list(map(float, f.read().split()))
     scaled_rel_poses = scale_rel(rel_poses.copy(), scales)
-    scaled_pred_path = abs2path(rel2abs(scaled_rel_poses), label="predicted by SfM-Learner path (scaled)")
+    scaled_pred_path = abs2path(rel2abs(scaled_rel_poses), label="Proposed Approach")
     print("Load scales: ", os.path.join(args.dataset, "sequences", args.sequence, "scale.txt"))
 
     pathes = [pred_path, true_path, scaled_pred_path]
