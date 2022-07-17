@@ -3,18 +3,19 @@ import argparse
 
 import numpy as np
 import pandas as pd
-import plotly.express as px
 
 
 def predictions2rel(predictions):
-    """Convert output of test_pose.py to absolute poses
+    """Convert output of test_pose.py to relative poses
 
     Parameters
     ----------
     predictions : ndarray (N, seq_length, 3, 4)
-        An array contains (3, 4) pose matrixes. For each row first pose is identity, others are relative to the previous.
+        An array contains (3, 4) pose matrixes. For each row first pose is identity,
+        others are relative to the previous.
 
-        P_i_j is (3, 4) pose matrix for frame i relative to the pose for frame j. Note that P_i_i is identity pose.
+        P_i_j is (3, 4) pose matrix for frame i relative to the pose for frame j.
+        Note that P_i_i is identity pose.
 
         Array for seq_length = 5:
         [[P_0_0, P_1_0, P_2_1, P_3_2, P_4_3]
@@ -129,28 +130,6 @@ def kitti2abs(path):
     return np.array(abs_poses)
 
 
-def slam2abs(translations):
-    """Read custom absolute poses format
-
-    Parameters
-    ----------
-    translations : ndarray (N, 3, 1)
-        An array of absolute translations.
-
-    Returns
-    -------
-    abs_poses : ndarray (N, 3, 4)
-        An array contains (3, 4) pose matrixes in world coordinates.
-    """
-    abs_poses = []
-
-    for translation in translations:
-        abs_pose = np.concatenate([np.eye(3), translation], axis=1)
-        abs_poses.append(abs_pose)
-
-    return np.array(abs_poses)
-
-
 def abs2path(abs_poses, label):
     """Read custom absolute poses format
 
@@ -178,7 +157,7 @@ def abs2path(abs_poses, label):
     path = []
 
     length = 0
-    prev = {"x": 0, "y": 0, "z": 0, "frame": 0, "length": length, "label": label}
+    prev = {"x": 0, "y": 0, "z": 0, "Frame": 0, "Length": length, "Label": label}
 
     for frame, pose in enumerate(abs_poses):
         translation = pose[:, 3]
@@ -186,7 +165,7 @@ def abs2path(abs_poses, label):
 
         length += np.sqrt(np.sum(np.square(np.stack([x, y, z]) - np.stack([prev["x"], prev["y"], prev["z"]]))))
 
-        curr = {"x": x, "y": y, "z": z, "frame": frame + 1, "length": length, "label": label}
+        curr = {"x": x, "y": y, "z": z, "Frame": frame + 1, "Length": length, "Label": label}
 
         path.append(curr)
         prev = curr
@@ -195,32 +174,39 @@ def abs2path(abs_poses, label):
 
 
 def get_arguments():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser("Create dataframe for trajectories visualization")
 
-    parser.add_argument("--dataset", type=str, help=".npy file with predictions from test_pose.py")
-    parser.add_argument("--sequence", type=str, help=".npy file with predictions from test_pose.py")
+    parser.add_argument("--dataset", type=str, help="Path to dataset folder")
+    parser.add_argument("--sequence", type=str, help="Sequence name")
 
     return parser.parse_args()
 
 
-if __name__ == "__main__":
+def main():
     args = get_arguments()
 
-    rel_poses = predictions2rel(np.load(os.path.join(args.dataset, "sequences", args.sequence, "predictions.npy")))
+    path = os.path.join(args.dataset, "sequences", args.sequence, "predictions.npy")
+    rel_poses = predictions2rel(np.load(path))
     pred_path = abs2path(rel2abs(rel_poses.copy()), label="Trajectory predicted by SfM Learner")
-    print("Load predicted path: ", os.path.join(args.dataset, "sequences", args.sequence, "predictions.npy"))
+    print("Load predicted path: ", path)
 
-    true_path = abs2path(kitti2abs(os.path.join(args.dataset, "poses", f"{args.sequence}.txt")), label="Ground Truth Trajectory")
-    print("Load ground truth path: ", os.path.join(args.dataset, "poses", f"{args.sequence}.txt"))
+    path = os.path.join(args.dataset, "poses", f"{args.sequence}.txt")
+    true_path = abs2path(kitti2abs(path), label="Ground Truth Trajectory")
+    print("Load ground truth path: ", path)
 
-    with open(os.path.join(args.dataset, "sequences", args.sequence, "scale.txt"), "r") as f:
+    path = os.path.join(args.dataset, "sequences", args.sequence, "scale.txt")
+    with open(path, "r") as f:
         scales = list(map(float, f.read().split()))
     scaled_rel_poses = scale_rel(rel_poses.copy(), scales)
     scaled_pred_path = abs2path(rel2abs(scaled_rel_poses), label="Proposed Approach")
-    print("Load scales: ", os.path.join(args.dataset, "sequences", args.sequence, "scale.txt"))
+    print("Load scales: ", path)
 
     pathes = [pred_path, true_path, scaled_pred_path]
 
-    pd.concat(pathes).to_csv(os.path.join(args.dataset, "sequences", args.sequence, "visualize.csv"))
-    print("Save dataframe for plotly: ", os.path.join(args.dataset, "sequences", args.sequence, "visualize.csv"))
+    path = os.path.join(args.dataset, "sequences", args.sequence, "visualize.csv")
+    pd.concat(pathes).to_csv(path)
+    print("Save dataframe for plotly: ", path)
 
+
+if __name__ == "__main__":
+    main()

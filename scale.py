@@ -1,126 +1,197 @@
-import os
 import argparse
+import os
 from glob import glob
 
-import pydeck
-import pyransac3d
 import numpy as np
-import pandas as pd
+import plotly.graph_objects as go
+import pyransac3d
 from skimage import io
-import matplotlib.pyplot as plt
 from tqdm.auto import tqdm
 
 
-def generate_pointcloud(depth, intrinsics, rgb=None, mask=None, color=None):
-    fx, fy, cx, cy = intrinsics
+def generate_pointcloud_by_depth(depth, intrinsics, colors=None, mask=None, color=(0, 255, 0)):
+    """Generate pointcloud by depth and intrinsics
 
-    if rgb is None:
-        rgb = np.zeros(depth.shape + (3,), dtype=int)
-    if mask is None:
-        mask = np.ones_like(depth, dtype=int)
+    Parameters
+    ----------
+    depth : ndarray (height, width)
+        Depth predicted by SfM Learner
+    intrinsics : [fx, fy, cx, cy]
+        Inner camera parameters
+    colors : ndarray (height, width)
+        RGB image
+    mask : ndarray (height, width)
+        Road segmentation mask
+    color : (r, g, b)
+        Color to fill pointcloud if colors is not set
 
+    Returns
+    -------
+    pointcloud : ndarray (N, 6)
+        point cloud in x, y, z, r, g, b format
+    """
     rows, cols = depth.shape
     c, r = np.meshgrid(np.arange(cols), np.arange(rows), sparse=True)
+
+    fx, fy, cx, cy = intrinsics
 
     z = depth
     x = z * (c - cx) / fx
     y = z * (r - cy) / fy
-    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
 
-    if color is not None:
-        r = color[0] * np.ones_like(z, dtype=int)
-        g = color[1] * np.ones_like(z, dtype=int)
-        b = color[2] * np.ones_like(z, dtype=int)
+    points = np.stack([x, y, z], axis=-1)
 
-    pointcloud = np.dstack((x, y, z, r, g, b))
+    if colors is None:
+        colors = color * np.ones_like(points)
+    if mask is None:
+        mask = np.ones_like(depth, dtype=int)
+
+    pointcloud = np.dstack([points, colors])
 
     return pointcloud[(z > 0) & (mask > 0)]
 
 
-def visualize_pointcloud(point_cloud):
-    df = pd.DataFrame(point_cloud, columns=["x", "y", "z", "r", "g", "b"])
-    df[["r", "g", "b"]] = df[["r", "g", "b"]].astype(int)
-    target = [df.x.mean(), df.y.mean(), df.z.mean()]
+def generate_pointcloud_by_equation(eq, color=(0, 255, 0), bbox=(-10, 0, 20, 20)):
+    """Generate pointcloud by plane equation
 
-    point_cloud_layer = pydeck.Layer(
-        "PointCloudLayer",
-        df,
-        get_position=["x", "y", "z"],
-        get_color=["r", "g", "b"])
+    Parameters
+    ----------
+    eq : [A, B, C, D] for Ax + By + Cz + D = 0 equation
+        Plane equation
+    color : (r, g, b)
+        Color to fill plane
+    bbox : [x, y, h, w]
+        where to draw plane
 
-    view_state = pydeck.ViewState(target=target, controller=True, zoom=1, rotation_x=-90)
-    view = pydeck.View(type="OrbitView", controller=True)
+    Returns
+    -------
+    pointcloud : ndarray (N, 6)
+        point cloud in x, y, z, r, g, b format
+    """
+    c, r = np.meshgrid(np.linspace(bbox[0], bbox[0] + bbox[2], 100),
+                       np.linspace(bbox[1], bbox[1] + bbox[3], 100))
 
-    r = pydeck.Deck(point_cloud_layer, initial_view_state=view_state, views=[view])
+    if abs(eq[1]) > 0:
+        x = c.ravel()
+        z = r.ravel()
+        y = -(eq[0] * x + eq[2] * z + eq[3]) / eq[1]
+    elif abs(eq[0]) > 0:
+        y = c.ravel()
+        z = r.ravel()
+        x = -(eq[1] * y + eq[2] * z + eq[3]) / eq[0]
+    else:
+        raise ValueError(f"Plane equation {eq} is incorrect")
 
-    return r
-
-
-def camera_height(best_eq):
-    a, b, c, d = best_eq
-    x, y, z = 0, 0, 0
-
-    h = np.abs(a * x + b * y + c * z + d) / np.sqrt(np.square([a, b, c]).sum())
-
-    return h
-
-
-def generate_pointcloud_for_plane(eq, color=(255, 0, 0), radius=100):
-    # eq: Ax+By+Cz+D = 0
-    # y = -(Ax+Cz+D)/B
-
-    XX, ZZ = np.meshgrid(np.linspace(-radius, radius, 10),
-                         np.linspace(-radius, radius, 10))
-    X = XX.ravel()
-    Z = ZZ.ravel()
-    Y = -(eq[0] * X + eq[2] * Z + eq[3]) / eq[1]
-    R = color[0] * np.ones_like(X, dtype=int)
-    G = color[1] * np.ones_like(X, dtype=int)
-    B = color[2] * np.ones_like(X, dtype=int)
-
-    pointcloud = np.vstack([X, Y, Z, R, G, B]).transpose()
+    points = np.stack([x, y, z], axis=-1)
+    colors = color * np.ones_like(points)
+    pointcloud = np.hstack([points, colors])
 
     return pointcloud
 
 
-def find_scale(depth, intrinsics, true_height, rgb=None, mask=None, visualize=True):
-    pointcloud_segmented = generate_pointcloud(depth, intrinsics, rgb, mask, color=(0, 255, 0))
+def visualize_pointcloud(pointcloud):
+    """Visualize pointcloud
 
-    best_eq, best_inlaers = pyransac3d.Plane().fit(pointcloud_segmented[..., :3], thresh=0.01, maxIteration=100)
+    Parameters
+    ----------
+    pointcloud : pointcloud : ndarray (N, 6)
+        point cloud in x, y, z, r, g, b format
 
-    depth_scale = camera_height(best_eq) / true_height
+    Returns
+    -------
+    figure : go.Figure
+        call figure.show() to visualize pointcloud
+    """
+    fig = go.Figure(
+        data=[
+            go.Scatter3d(
+                x=pointcloud[:, 0], y=pointcloud[:, 1], z=pointcloud[:, 2],
+                mode="markers",
+                marker=dict(size=1, color=pointcloud[:, 3:])
+            )
+        ]
+    )
+
+    return fig
+
+
+def camera_height(plane_equation):
+    """Calculate distance from camera in (0, 0, 0) to given plane
+
+    Parameters
+    ----------
+    plane_equation : [A, B, C, D] for Ax + By + Cz + D = 0 equation
+        Plane equation
+
+    Returns
+    -------
+    height : float
+        Distance from camera to plane
+    """
+    a, b, c, d = plane_equation
+    x, y, z = 0, 0, 0
+
+    height = np.abs(a * x + b * y + c * z + d) / np.sqrt(np.sum(np.square([a, b, c])))
+
+    return height
+
+
+def find_scale(depth, intrinsics, true_height, rgb=None, visualize=False):
+    """Find scale knowing camera height
+
+    Parameters
+    ----------
+    depth : ndarray (height, width)
+        Depth predicted by SfM Learner
+    intrinsics : [fx, fy, cx, cy]
+        Inner camera parameters
+    true_height : float
+        Distance from camera to plane
+    rgb : ndarray (height, width)
+        RGB image
+    visualize : bool, default=False
+        Do visualize pointcloud and detected plane
+
+    Returns
+    -------
+    scale : float
+        true_height / height, multiple your pose by it
+    """
+    pointcloud = generate_pointcloud_by_depth(depth, intrinsics)
+    best_eq, best_inlaers = pyransac3d.Plane().fit(pointcloud[..., :3], thresh=0.01, maxIteration=100)
+
+    height = camera_height(best_eq)
+    depth_scale = true_height / height
 
     if not visualize:
         return depth_scale
 
-    print("Camera height is", camera_height(best_eq))
-    print("Scale depth", 1 / depth_scale, "times to maximum depth", depth.max() / depth_scale, "meters")
+    print("Scale depth", round(depth_scale, 2), "times to maximum depth", round(depth.max() * depth_scale, 2), "meters")
 
-    pointcloud = generate_pointcloud(depth / depth_scale, rgb)
-    pointcloud_segmented = generate_pointcloud(depth / depth_scale, rgb, mask, color=(0, 255, 0))
-    best_eq, best_inlaers = pyransac3d.Plane().fit(pointcloud_segmented[..., :3], thresh=0.01, maxIteration=100)
-    pointcloud_roadway = generate_pointcloud_for_plane(best_eq, color=(255, 0, 0), radius=depth.max() / depth_scale)
-    pointcloud_best_inlaers = pointcloud_segmented[best_inlaers]
-    pointcloud_best_inlaers[..., 3:] = (0, 0, 255)
+    depth = depth * depth_scale
+    pointcloud = generate_pointcloud_by_depth(depth, intrinsics, rgb)
+    best_eq, best_inlaers = pyransac3d.Plane().fit(pointcloud[..., :3], thresh=0.01, maxIteration=100)
 
-    r = visualize_pointcloud(np.vstack([pointcloud, pointcloud_roadway, pointcloud_best_inlaers]))
-    r.to_html("temp.html", open_browser=True)
+    plane = generate_pointcloud_by_equation(best_eq)
+    pointcloud = np.vstack([pointcloud, plane])
+
+    fig = visualize_pointcloud(pointcloud)
+    fig.show()
 
     return depth_scale
 
 
 def get_arguments():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--sequence", type=str, help="path to sequence")
+    parser = argparse.ArgumentParser("Find scale knowing camera height")
+    parser.add_argument("--sequence", type=str, help="Path to sequence folder")
 
     return parser.parse_args()
 
 
-if __name__ == "__main__":
+def main():
     args = get_arguments()
 
-    disparities = glob(os.path.join(args.sequence, "disparity", "*_disp.jpg"))
-    disparities = sorted(disparities, key=lambda path: int(path.split("/")[-1].split("_")[0]))
+    disparities = sorted(glob(os.path.join(args.sequence, "disparity", "*_disp.jpg")))
     print("Found disparities:", disparities[:2])
 
     with open(os.path.join(args.sequence, "cam.txt"), "r") as f:
@@ -139,9 +210,8 @@ if __name__ == "__main__":
     for disparity in tqdm(disparities, desc="Frames"):
         disparity = io.imread(disparity, as_gray=True)
         depth = np.divide(1, disparity, where=disparity != 0)
-        scale = find_scale(depth, [fx, fy, cx, cy], true_height, rgb=None, mask=None, visualize=False)
-        scale = max(1e-3, scale)
-        scales.append(1 / scale)
+        scale = find_scale(depth, [fx, fy, cx, cy], true_height)
+        scales.append(scale)
     print("Median scale is:", np.median(scales))
 
     with open(os.path.join(args.sequence, "scale.txt"), "w") as f:
@@ -149,3 +219,6 @@ if __name__ == "__main__":
             f.write(str(scale) + "\n")
     print("Save scales to:", os.path.join(args.sequence, "scale.txt"))
 
+
+if __name__ == "__main__":
+    main()
