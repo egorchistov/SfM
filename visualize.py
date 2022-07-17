@@ -213,15 +213,14 @@ if __name__ == "__main__":
     true_path = abs2path(kitti2abs(os.path.join(args.dataset, "poses", f"{args.sequence}.txt")), label="ground truth path")
     print("Load ground truth path: ", os.path.join(args.dataset, "poses", f"{args.sequence}.txt"))
 
-    with open(os.path.join(args.dataset, "sequences", args.sequence, "scales.txt"), "r") as f:
+    with open(os.path.join(args.dataset, "sequences", args.sequence, "scale.txt"), "r") as f:
         scales = list(map(float, f.read().split()))
     scaled_rel_poses = scale_rel(rel_poses.copy(), scales)
     scaled_pred_path = abs2path(rel2abs(scaled_rel_poses), label="predicted by SfM-Learner path (scaled)")
-    print("Load scales: ", os.path.join(args.dataset, "sequences", args.sequence, "scales.txt"))
+    print("Load scales: ", os.path.join(args.dataset, "sequences", args.sequence, "scale.txt"))
 
     pathes = [pred_path, true_path, scaled_pred_path]
 
-    fig = px.scatter_3d(pd.concat(pathes), x="x", y="y", z="z", color="label", hover_data=["length", "frame"])
-    fig.update_layout(scene=dict(aspectmode="data"))
-    fig.show()
+    pd.concat(pathes).to_csv(os.path.join(args.dataset, "sequences", args.sequence, "visualize.csv"))
+    print("Save dataframe for plotly: ", os.path.join(args.dataset, "sequences", args.sequence, "visualize.csv"))
 

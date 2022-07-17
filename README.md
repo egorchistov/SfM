@@ -5,7 +5,7 @@
 The repository is under development and will be updated
 
 1. [x] Create repository description in README
-1. [ ] Add Google Colaboratory demo
+1. [x] Add Google Colaboratory demo
 1. [ ] Add proposed method description and results
 1. [ ] Add documentation and tests
 1. [ ] Think about trajectory length, frame rate and frame size

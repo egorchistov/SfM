@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from skimage import io
 import matplotlib.pyplot as plt
+from tqdm.auto import tqdm
 
 
 def generate_pointcloud(depth, intrinsics, rgb=None, mask=None, color=None):
@@ -88,6 +89,7 @@ def find_scale(depth, intrinsics, true_height, rgb=None, mask=None, visualize=Tr
     best_eq, best_inlaers = pyransac3d.Plane().fit(pointcloud_segmented[..., :3], thresh=0.01, maxIteration=100)
 
     depth_scale = camera_height(best_eq) / true_height
+
     if not visualize:
         return depth_scale
 
@@ -117,8 +119,9 @@ def get_arguments():
 if __name__ == "__main__":
     args = get_arguments()
 
-    disparities = glob(os.path.join(args.sequence, "disparity"))
-    print("Found disparities:", disparities[:3])
+    disparities = glob(os.path.join(args.sequence, "disparity", "*_disp.jpg"))
+    disparities = sorted(disparities, key=lambda path: int(path.split("/")[-1].split("_")[0]))
+    print("Found disparities:", disparities[:2])
 
     with open(os.path.join(args.sequence, "cam.txt"), "r") as f:
         intrinsics = list(map(float, f.read().split()))
@@ -130,18 +133,20 @@ if __name__ == "__main__":
 
     with open(os.path.join(args.sequence, "height.txt"), "r") as f:
         true_height = float(f.read())
-    print("Load true_height:", true_height, "meters")
+    print("Load camera height:", true_height, "meters")
 
     with open(os.path.join(args.sequence, "rate.txt"), "r") as f:
-        rate = int(f.read())
-    print("Load rate:", rate, "fps")
+        rate = float(f.read())
+    print("Load framerate downsampling factor:", rate)
 
     scales = []
-    for disparity in disparities:
-        disparity = io.imread(disparity)
-        depth = 1 / disparity
+    for disparity in tqdm(disparities, desc="Frames"):
+        disparity = io.imread(disparity, as_gray=True)
+        depth = np.divide(1, disparity, where=disparity != 0)
         scale = find_scale(depth, [fx, fy, cx, cy], true_height, rgb=None, mask=None, visualize=False)
-        scales.append(scale / rate)
+        scale = max(1e-3, scale / rate)
+        scales.append(1 / scale)
+    print("Median scale is:", np.median(scales))
 
     with open(os.path.join(args.sequence, "scale.txt"), "w") as f:
         for scale in scales:
