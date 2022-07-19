@@ -51,7 +51,7 @@ def generate_pointcloud_by_depth(depth, intrinsics, colors=None, mask=None, colo
     return pointcloud[(z > 0) & (mask > 0)]
 
 
-def generate_pointcloud_by_equation(eq, color=(0, 255, 0), bbox=(0, 0, 5, 5)):
+def generate_pointcloud_by_equation(eq, color=(0, 255, 0), bbox=(-10, 0, 20, 20)):
     """Generate pointcloud by plane equation
 
     Parameters
@@ -68,20 +68,17 @@ def generate_pointcloud_by_equation(eq, color=(0, 255, 0), bbox=(0, 0, 5, 5)):
     pointcloud : ndarray (N, 6)
         point cloud in x, y, z, r, g, b format
     """
-    c, r = np.meshgrid(np.linspace(bbox[0], bbox[0] + bbox[2], 10),
-                       np.linspace(bbox[1], bbox[1] + bbox[3], 10))
-    if eq[0] > 0:
-        y = c.ravel()
-        z = r.ravel()
-        x = -(eq[1] * y + eq[2] * z + eq[3]) / eq[0]
-    elif eq[1] > 0:
+    c, r = np.meshgrid(np.linspace(bbox[0], bbox[0] + bbox[2], 100),
+                       np.linspace(bbox[1], bbox[1] + bbox[3], 100))
+
+    if abs(eq[1]) > 0:
         x = c.ravel()
         z = r.ravel()
         y = -(eq[0] * x + eq[2] * z + eq[3]) / eq[1]
-    elif eq[2] > 0:
-        x = c.ravel()
-        y = r.ravel()
-        z = -(eq[0] * x + eq[1] * y + eq[3]) / eq[2]
+    elif abs(eq[0]) > 0:
+        y = c.ravel()
+        z = r.ravel()
+        x = -(eq[1] * y + eq[2] * z + eq[3]) / eq[0]
     else:
         raise ValueError(f"Plane equation {eq} is incorrect")
 
@@ -169,7 +166,7 @@ def find_scale(depth, intrinsics, true_height, rgb=None, visualize=False):
     if not visualize:
         return depth_scale
 
-    print("Scale depth", depth_scale, "times to maximum depth", depth.max() * depth_scale, "meters")
+    print("Scale depth", round(depth_scale, 2), "times to maximum depth", round(depth.max() * depth_scale, 2), "meters")
 
     depth = depth * depth_scale
     pointcloud = generate_pointcloud_by_depth(depth, intrinsics, rgb)

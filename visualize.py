@@ -185,23 +185,27 @@ def get_arguments():
 def main():
     args = get_arguments()
 
-    rel_poses = predictions2rel(np.load(os.path.join(args.dataset, "sequences", args.sequence, "predictions.npy")))
+    path = os.path.join(args.dataset, "sequences", args.sequence, "predictions.npy")
+    rel_poses = predictions2rel(np.load(path))
     pred_path = abs2path(rel2abs(rel_poses.copy()), label="Trajectory predicted by SfM Learner")
-    print("Load predicted path: ", os.path.join(args.dataset, "sequences", args.sequence, "predictions.npy"))
+    print("Load predicted path: ", path)
 
-    true_path = abs2path(kitti2abs(os.path.join(args.dataset, "poses", f"{args.sequence}.txt")), label="Ground Truth Trajectory")
-    print("Load ground truth path: ", os.path.join(args.dataset, "poses", f"{args.sequence}.txt"))
+    path = os.path.join(args.dataset, "poses", f"{args.sequence}.txt")
+    true_path = abs2path(kitti2abs(path), label="Ground Truth Trajectory")
+    print("Load ground truth path: ", path)
 
-    with open(os.path.join(args.dataset, "sequences", args.sequence, "scale.txt"), "r") as f:
+    path = os.path.join(args.dataset, "sequences", args.sequence, "scale.txt")
+    with open(path, "r") as f:
         scales = list(map(float, f.read().split()))
     scaled_rel_poses = scale_rel(rel_poses.copy(), scales)
     scaled_pred_path = abs2path(rel2abs(scaled_rel_poses), label="Proposed Approach")
-    print("Load scales: ", os.path.join(args.dataset, "sequences", args.sequence, "scale.txt"))
+    print("Load scales: ", path)
 
     pathes = [pred_path, true_path, scaled_pred_path]
 
-    pd.concat(pathes).to_csv(os.path.join(args.dataset, "sequences", args.sequence, "visualize.csv"))
-    print("Save dataframe for plotly: ", os.path.join(args.dataset, "sequences", args.sequence, "visualize.csv"))
+    path = os.path.join(args.dataset, "sequences", args.sequence, "visualize.csv")
+    pd.concat(pathes).to_csv(path)
+    print("Save dataframe for plotly: ", path)
 
 
 if __name__ == "__main__":
